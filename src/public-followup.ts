@@ -1438,14 +1438,17 @@ function relationLanded(
   expected: ExpectedFinal,
 ): boolean {
   const event = relation.accepted_events.at(-1);
-  const terminalState =
-    relation.state === "landed" ||
-    (relation.state === "failed" && expected.type === "failure-outcome");
-  return (
-    terminalState &&
-    event !== undefined &&
-    eventMatchesExpected(event, expected)
-  );
+  if (event === undefined) return false;
+  if (relation.state === "landed") {
+    return eventMatchesExpected(event, expected);
+  }
+  if (relation.state === "failed") {
+    return expected.type === "failure-outcome"
+      ? eventMatchesExpected(event, expected)
+      : event.outcome_type === "failed" &&
+          failureDeliverablesAreSafe(event.deliverables);
+  }
+  return false;
 }
 
 /** Derived public-delivery readiness, intentionally separate from worker dispatch readiness. */
