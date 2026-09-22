@@ -1,0 +1,14 @@
+SCENARIO: 0.2.5-style failed relation persisted as pending-work self-heals on read
+$ tasks-axi public-followup list --json
+{"count":1,"id":"public-live-ab","delivery":"ready","relation":"failed","outcome":"failed"}
+$ tasks-axi public-followup ready --json
+{"count":1,"ids":["public-live-ab"]}
+$ tasks-axi public-followup begin-delivery ... --json
+{"ok":true,"delivery":"delivery-posting","relation":"failed"}
+
+ADVERSARIAL SCENARIO: landed relation hand-edited to pending-work still fails closed
+$ tasks-axi public-followup list --json
+error: "public_followup.delivery.state is stale: work is ready"
+code: VALIDATION_ERROR
+help[1]: Repair the typed public-followup data before retrying
+exit_status: 2

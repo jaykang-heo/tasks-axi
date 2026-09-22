@@ -1,0 +1,6 @@
+$ tasks-axi public-followup work-event ...failed report relation... --json
+{"expected":"report-ready","delivery":"ready","relation":"failed","outcome":"failed","error_code":"parked","public_safe_outcome":"The report work was parked and did not produce a report."}
+$ tasks-axi public-followup ready --json
+{"count":1,"ids":["public-report-ab"]}
+$ tasks-axi public-followup begin-delivery ... --json
+{"ok":true,"delivery":"delivery-posting"}

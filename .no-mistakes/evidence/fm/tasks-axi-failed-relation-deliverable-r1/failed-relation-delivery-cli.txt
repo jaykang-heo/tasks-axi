@@ -1,0 +1,12 @@
+$ tasks-axi public-followup add ... --json
+{"ok":true,"action":"public-followup.add","id":"public-live-ab","delivery":"intent"}
+$ tasks-axi public-followup bind-work ... --json
+{"ok":true,"action":"public-followup.bind-work","delivery":"pending-work","relation":"bound"}
+$ tasks-axi public-followup work-event ...failed... --json
+{"ok":true,"action":"public-followup.work-event","delivery":"ready","relation":"failed","outcome":"failed","error_code":"deliverable","public_safe_outcome":"The promised fix could not be completed because the worker failed."}
+$ tasks-axi public-followup ready --json
+{"count":1,"ids":["public-live-ab"]}
+$ tasks-axi public-followup begin-delivery ... --json
+{"ok":true,"action":"public-followup.begin-delivery","delivery":"delivery-posting","attempt":1}
+$ tasks-axi public-followup record-delivery ... --json
+{"ok":true,"action":"public-followup.record-delivery","task_state":"done","delivery":"posted","public_safe_outcome":"The promised fix could not be completed because the worker failed."}
