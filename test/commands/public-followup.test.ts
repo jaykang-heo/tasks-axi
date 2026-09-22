@@ -470,9 +470,8 @@ describe("public-followup commands", () => {
       );
 
       const source = b.read();
-      const match = /<!-- tasks-axi:public-followup\/v1:([A-Za-z0-9_-]+) -->/.exec(
-        source,
-      );
+      const match =
+        /<!-- tasks-axi:public-followup\/v1:([A-Za-z0-9_-]+) -->/.exec(source);
       expect(match).not.toBeNull();
       const encoded = match![1];
       const persisted = JSON.parse(

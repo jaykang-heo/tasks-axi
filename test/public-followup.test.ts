@@ -143,7 +143,10 @@ describe("isPublicFollowupReady", () => {
 
   it("still requires a matching failed event for a failure-outcome promise (unchanged)", () => {
     const value = followup(
-      expectedFinal({ type: "failure-outcome", required_deliverables: ["error_code"] }),
+      expectedFinal({
+        type: "failure-outcome",
+        required_deliverables: ["error_code"],
+      }),
       [
         relation({
           state: "failed",
@@ -168,7 +171,10 @@ describe("isPublicFollowupReady", () => {
         accepted_events: [
           acceptedEvent({
             outcome_type: "failed",
-            deliverables: { error_code: "quota-exhausted", extra: "not-allowed" },
+            deliverables: {
+              error_code: "quota-exhausted",
+              extra: "not-allowed",
+            },
             public_safe_outcome: "This one did not pan out.",
           }),
         ],
