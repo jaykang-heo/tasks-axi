@@ -170,7 +170,7 @@ An error file records the current attempt count, a safe delivery state, validate
 Its attempt count must exactly match the currently recorded delivery attempt, and stale or future-attempt errors fail without mutation.
 Expected-final types permit only their matching safe deliverables: `pr_url`, `report_path`, `commit_sha`, or `error_code`.
 A required relation whose bound work reports `failed` is terminal and deliverable for any expected-final type, not only `failure-outcome`: the accepted event's `public_safe_outcome` is the honest text to deliver.
-An obligation an older version parked in `pending-work` because its failed relation was not yet deliverable is read back as `ready`; a `ready` record whose work is not ready is still a hard validation error.
+An obligation an older version parked in `pending-work` because its failed relation was not yet deliverable is read back as `ready`; any other stale `delivery.state` is still a hard validation error.
 Run `tasks-axi public-followup --help` for the exact file-backed command surface and state names.
 
 Each mutation is idempotent and returns the monotonic obligation `revision`, changed fields, and complete typed payload under `--json`.

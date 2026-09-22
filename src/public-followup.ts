@@ -1105,6 +1105,9 @@ export function normalizePublicFollowup(
     validation(`${path}.delivery.state is stale: work is not ready`);
   }
   if (normalized.delivery.state === "pending-work" && derivedReady) {
+    if (isPublicFollowupReady(normalized, false)) {
+      validation(`${path}.delivery.state is stale: work is ready`);
+    }
     normalized.delivery.state = "ready";
   }
   if (
@@ -1436,6 +1439,7 @@ export function validateWorkEventContract(
 function relationLanded(
   relation: WorkRelation,
   expected: ExpectedFinal,
+  failedIsTerminal = true,
 ): boolean {
   const event = relation.accepted_events.at(-1);
   if (event === undefined) return false;
@@ -1445,14 +1449,18 @@ function relationLanded(
   if (relation.state === "failed") {
     return expected.type === "failure-outcome"
       ? eventMatchesExpected(event, expected)
-      : event.outcome_type === "failed" &&
+      : failedIsTerminal &&
+          event.outcome_type === "failed" &&
           failureDeliverablesAreSafe(event.deliverables);
   }
   return false;
 }
 
 /** Derived public-delivery readiness, intentionally separate from worker dispatch readiness. */
-export function isPublicFollowupReady(value: PublicFollowup): boolean {
+export function isPublicFollowupReady(
+  value: PublicFollowup,
+  failedIsTerminal = true,
+): boolean {
   const active = value.work_relations.filter(
     (relation) => relation.state !== "superseded",
   );
@@ -1461,17 +1469,20 @@ export function isPublicFollowupReady(value: PublicFollowup): boolean {
   if (fulfilling.length === 0) return false;
   const required = active.filter((relation) => relation.required);
   if (
-    required.some((relation) => !relationLanded(relation, value.expected_final))
+    required.some(
+      (relation) =>
+        !relationLanded(relation, value.expected_final, failedIsTerminal),
+    )
   ) {
     return false;
   }
   if (value.expected_final.completion_policy === "all-required") {
     return fulfilling.every((relation) =>
-      relationLanded(relation, value.expected_final),
+      relationLanded(relation, value.expected_final, failedIsTerminal),
     );
   }
   return fulfilling.some((relation) =>
-    relationLanded(relation, value.expected_final),
+    relationLanded(relation, value.expected_final, failedIsTerminal),
   );
 }
 

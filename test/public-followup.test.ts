@@ -225,6 +225,39 @@ describe("decoding a record persisted before the option-A readiness rule", () =>
     expect(decoded.revision).toBe(value.revision);
   });
 
+  it("still rejects a pending-work state whose landed relation was already ready", () => {
+    const value = followup(expectedFinal(), [relation()]);
+    expect(value.delivery.state).toBe("pending-work");
+    expect(() => decodePublicFollowup(persisted(value))).toThrow(
+      /stale: work is ready/,
+    );
+  });
+
+  it("still rejects a pending-work state whose failed relation matched a failure-outcome promise", () => {
+    const value = followup(
+      expectedFinal({
+        type: "failure-outcome",
+        required_deliverables: ["error_code"],
+      }),
+      [
+        relation({
+          state: "failed",
+          accepted_events: [
+            acceptedEvent({
+              outcome_type: "failed",
+              deliverables: { error_code: "build-failed" },
+              public_safe_outcome: "The work failed before landing.",
+            }),
+          ],
+          accepted_event_ids: ["evt-1"],
+        }),
+      ],
+    );
+    expect(() => decodePublicFollowup(persisted(value))).toThrow(
+      /stale: work is ready/,
+    );
+  });
+
   it("still rejects a ready delivery state whose work is not ready", () => {
     const value = followup(expectedFinal(), [
       relation({ state: "bound", accepted_event_ids: [], accepted_events: [] }),
