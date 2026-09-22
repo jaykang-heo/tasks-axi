@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodePublicFollowup,
   isPublicFollowupReady,
   type AcceptedWorkEvent,
   type ExpectedFinal,
@@ -195,5 +196,42 @@ describe("isPublicFollowupReady", () => {
       }),
     ]);
     expect(isPublicFollowupReady(value)).toBe(false);
+  });
+});
+
+function persisted(value: PublicFollowup): string {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+}
+
+describe("decoding a record persisted before the option-A readiness rule", () => {
+  it("advances a stale pending-work failed relation to ready instead of failing", () => {
+    const value = followup(expectedFinal({ type: "pr-merged" }), [
+      relation({
+        state: "failed",
+        accepted_events: [
+          acceptedEvent({
+            outcome_type: "failed",
+            deliverables: { error_code: "quota-exhausted" },
+            public_safe_outcome: "This one did not pan out.",
+          }),
+        ],
+        accepted_event_ids: ["evt-1"],
+      }),
+    ]);
+    expect(value.delivery.state).toBe("pending-work");
+
+    const decoded = decodePublicFollowup(persisted(value));
+    expect(decoded.delivery.state).toBe("ready");
+    expect(decoded.revision).toBe(value.revision);
+  });
+
+  it("still rejects a ready delivery state whose work is not ready", () => {
+    const value = followup(expectedFinal(), [
+      relation({ state: "bound", accepted_event_ids: [], accepted_events: [] }),
+    ]);
+    value.delivery.state = "ready";
+    expect(() => decodePublicFollowup(persisted(value))).toThrow(
+      /stale: work is not ready/,
+    );
   });
 });

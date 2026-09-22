@@ -455,6 +455,59 @@ describe("public-followup commands", () => {
     }
   });
 
+  it("upgrades a backlog persisted before option A instead of refusing to read it", async () => {
+    const b = makeBacklog(EMPTY);
+    try {
+      await add(b);
+      await bind(b);
+      await acceptEvent(
+        b,
+        event("evt-code-failed", "rel-code", "work-code-q1", 1, {
+          outcome_type: "failed",
+          deliverables: { error_code: "quota-exhausted" },
+          public_safe_outcome: "This one did not pan out.",
+        }),
+      );
+
+      const source = b.read();
+      const match = /<!-- tasks-axi:public-followup\/v1:([A-Za-z0-9_-]+) -->/.exec(
+        source,
+      );
+      expect(match).not.toBeNull();
+      const encoded = match![1];
+      const persisted = JSON.parse(
+        Buffer.from(encoded, "base64url").toString("utf8"),
+      ) as Record<string, any>;
+      expect(persisted.delivery.state).toBe("ready");
+      persisted.delivery.state = "pending-work";
+      writeFileSync(
+        b.path,
+        source.replace(
+          encoded,
+          Buffer.from(JSON.stringify(persisted), "utf8").toString("base64url"),
+        ),
+        "utf8",
+      );
+
+      const upgraded = await b.store.get("public-final-ab");
+      expect(upgraded?.public_followup?.delivery.state).toBe("ready");
+
+      const ready = JSON.parse(await run(b, "ready", ["--json"])) as Record<
+        string,
+        any
+      >;
+      expect(ready.count).toBe(1);
+      expect(ready.ready_public_followups[0].id).toBe("public-final-ab");
+
+      const begun = await begin(b);
+      expect(begun.task.public_followup.delivery.state).toBe(
+        "delivery-posting",
+      );
+    } finally {
+      b.cleanup();
+    }
+  });
+
   it("keeps a failure-outcome obligation delivering exactly as before", async () => {
     const b = makeBacklog(EMPTY);
     try {

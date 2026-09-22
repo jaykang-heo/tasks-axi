@@ -1105,7 +1105,7 @@ export function normalizePublicFollowup(
     validation(`${path}.delivery.state is stale: work is not ready`);
   }
   if (normalized.delivery.state === "pending-work" && derivedReady) {
-    validation(`${path}.delivery.state is stale: work is ready`);
+    normalized.delivery.state = "ready";
   }
   if (
     normalized.delivery.state === "intent" &&
