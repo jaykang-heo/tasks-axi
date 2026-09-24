@@ -138,6 +138,40 @@ describe("MarkdownStore on the hierarchical (v2) map", () => {
     }
   });
 
+  it("preserves a CRLF file's newline style on write", async () => {
+    const b = makeBacklog(MAP.replace(/\n/g, "\r\n"));
+    try {
+      await b.store.update("loose", { priority: 1 });
+      const text = b.read();
+      expect(text).toContain("\r\n");
+      expect(text).not.toMatch(/[^\r]\n/);
+      expect(text).toContain(
+        "- [/] 1. Loose work (kind: ship) (priority: 1) (since 2026-06-01) <!--#loose-->\r",
+      );
+    } finally {
+      b.cleanup();
+    }
+  });
+
+  it("canonicalizes the parent-body blank separator like tracker-axi, then holds stable", async () => {
+    const SPACED = MAP.replace("  parent body\n  - [x] 1. Child one", "  parent body\n\n  - [x] 1. Child one");
+    const b = makeBacklog(SPACED);
+    try {
+      await b.store.update("loose", { priority: 1 });
+      const once = b.read();
+      expect(once).not.toContain("  parent body\n\n  - [x] 1. Child one");
+      expect(once).toContain("  parent body\n  - [x] 1. Child one");
+      await b.store.update("call", { priority: 1 });
+      const before = once.split("\n");
+      const after = b.read().split("\n");
+      expect(after.filter((line, i) => line !== before[i])).toEqual([
+        "- [ ] 2. Held call (kind: captain) (priority: 1) (hold: pick A or B) (hold-kind: captain) <!--#call-->",
+      ]);
+    } finally {
+      b.cleanup();
+    }
+  });
+
   it("refuses malformed or mixed files instead of dropping rows", async () => {
     const b = makeBacklog(MAP);
     try {
