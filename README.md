@@ -62,6 +62,25 @@ tasks-axi setup hooks
 This installs a `SessionStart` hook for **Claude Code**, **Codex**, and **OpenCode** that surfaces the live backlog at the start of each session.
 **Restart your agent session after running this** so the new hook takes effect.
 
+### Firstmate fork (v2 map grammar)
+
+Firstmate runs the v2 hierarchical map grammar carried in this fork, not the upstream release.
+Install the CLI globally from the fork (upstream sync is manual only — this fork never auto-syncs):
+
+```sh
+rm -rf /tmp/tasks-axi-fork && git clone --depth 1 https://github.com/jaykang-heo/tasks-axi.git /tmp/tasks-axi-fork && (cd /tmp/tasks-axi-fork && npm install --no-audit --no-fund && npm pack --silent >/dev/null) && npm install -g /tmp/tasks-axi-fork/tasks-axi-*.tgz
+```
+
+Why this shape and not `npm install -g github:jaykang-heo/tasks-axi`:
+npm prepares git checkouts in an isolated dir before any dependency
+(including `typescript`) is installed, so the `prepare` build has no
+compiler and the install lands without runnable JS (`dist/` is never
+committed). Cloning first lets a normal local `npm install` provide
+devDependencies, `npm pack` bakes `dist/` into the tarball exactly as
+`npm publish` would, and the global install consumes that tarball.
+After a merge, the clone tracks the fork default branch; check out a
+tag or SHA after cloning when you need a fixed install.
+
 ## Usage
 
 Run with no arguments for a content-first dashboard of the current backlog:
