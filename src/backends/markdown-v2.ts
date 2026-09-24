@@ -56,6 +56,8 @@ export interface V2Tree {
   nodes: V2Node[];
   /** Effective state of every parent task at load, so writes cannot set one. */
   parentState: Map<string, State>;
+  /** Newline style observed at load, so a write preserves CRLF files. */
+  newline: "\n" | "\r\n";
 }
 
 /** Documents parsed from a v2 file carry their tree; the flat grammar never sets it. */
@@ -218,7 +220,12 @@ export function parseV2(src: string): V2Tree {
     return out;
   };
 
-  const tree: V2Tree = { preamble, nodes: nodes(2), parentState: new Map() };
+  const tree: V2Tree = {
+    preamble,
+    nodes: nodes(2),
+    parentState: new Map(),
+    newline: src.includes("\r\n") ? "\r\n" : "\n",
+  };
   if (i < lines.length) fail("unreachable content after the last node", i + 1);
   for (const check of checks) check();
   walkTasks(tree, (t) => {
@@ -446,5 +453,6 @@ export function renderV2(doc: MaybeV2Doc): string {
     if (out.length > 0) out.push("");
     renderNode(n, k + 1, 2);
   });
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+  const text = out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+  return tree.newline === "\r\n" ? text.replace(/\n/g, "\r\n") : text;
 }
