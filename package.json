@@ -40,7 +40,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "dev": "tsx bin/tasks-axi.ts",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepare": "npm run build"
   },
   "license": "MIT",
   "engines": {
