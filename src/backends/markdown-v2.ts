@@ -370,7 +370,49 @@ export function renderV2(doc: MaybeV2Doc): string {
 
   const added = order.filter((id) => !placed.has(id));
   if (added.length > 0) {
+    // Fail closed before writing: the rendered file is re-parsed on the next
+    // read and parseV2 rejects duplicate ids, so a collision introduced here
+    // would leave an unreadable backlog behind. Throwing here runs before
+    // persist's atomic write, so the file stays untouched.
+    const treeIds = new Set<string>();
+    const collect = (list: V2Node[]): void => {
+      for (const n of list) {
+        treeIds.add(n.id);
+        const tasks = (ts: V2Task[]): void => {
+          for (const t of ts) {
+            treeIds.add(t.id);
+            tasks(t.children);
+          }
+        };
+        tasks(n.tasks);
+        collect(n.nodes);
+      }
+    };
+    collect(tree.nodes);
     let unfiled = tree.nodes.find((n) => n.id === UNFILED);
+    const creating = !unfiled;
+    const after = new Set(treeIds);
+    if (creating) {
+      if (after.has(UNFILED)) {
+        throw new AxiError(`Cannot file new tasks: id "${UNFILED}" is already used in the backlog map`, "VALIDATION_ERROR", [
+          "Rename the existing record so the Unfiled request root can be created",
+        ]);
+      }
+      after.add(UNFILED);
+    }
+    for (const id of added) {
+      if (id === UNFILED) {
+        throw new AxiError(`Task id "${UNFILED}" is reserved for the Unfiled request root`, "VALIDATION_ERROR", [
+          "Pick a different task id",
+        ]);
+      }
+      if (after.has(id)) {
+        throw new AxiError(`Cannot file new task "${id}": the id is already used in the backlog map`, "VALIDATION_ERROR", [
+          "Pick a different task id",
+        ]);
+      }
+      after.add(id);
+    }
     if (!unfiled) {
       unfiled = { id: UNFILED, prose: "Unfiled ", body: [], tasks: [], nodes: [] };
       tree.nodes.push(unfiled);

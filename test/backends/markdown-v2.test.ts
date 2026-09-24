@@ -99,6 +99,45 @@ describe("MarkdownStore on the hierarchical (v2) map", () => {
     }
   });
 
+  it("refuses new tasks that collide with the Unfiled root and leaves the file untouched", async () => {
+    const COLLIDING = `# Backlog
+
+## [/] 1. Request root (repo: demo) <!--#req-->
+  ## Destination
+  The outcome.
+
+- [/] 1. Parent work (kind: ship) <!--#par-->
+  parent body
+  - [x] 1. Child one (kind: ship) (done 2026-06-20) <!--#c1-->
+  - [ ] 2. Child two (kind: ship) blocked-by: c1 <!--#c2-->
+- [ ] 2. Held call (kind: captain) (hold: pick A or B) (hold-kind: captain) <!--#call-->
+- [ ] 3. Oddly named (kind: ship) <!--#unfiled-->
+`;
+    const b = makeBacklog(COLLIDING);
+    try {
+      const before = b.read();
+      await expect(b.store.create({ id: "fresh", title: "fresh work", kind: "ship" })).rejects.toThrow(
+        /id "unfiled" is already used/,
+      );
+      expect(b.read()).toBe(before);
+      const { items } = await b.store.list({});
+      expect(items.map((t) => t.id).sort()).toEqual(["c1", "c2", "call", "par", "unfiled"]);
+    } finally {
+      b.cleanup();
+    }
+  });
+
+  it("reserves the unfiled id for new tasks and leaves the file untouched", async () => {
+    const b = makeBacklog(MAP);
+    try {
+      const before = b.read();
+      await expect(b.store.create({ id: "unfiled", title: "sneaky", kind: "ship" })).rejects.toThrow(/reserved/);
+      expect(b.read()).toBe(before);
+    } finally {
+      b.cleanup();
+    }
+  });
+
   it("refuses malformed or mixed files instead of dropping rows", async () => {
     const b = makeBacklog(MAP);
     try {
