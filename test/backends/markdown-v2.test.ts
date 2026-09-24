@@ -153,14 +153,13 @@ describe("MarkdownStore on the hierarchical (v2) map", () => {
     }
   });
 
-  it("canonicalizes the parent-body blank separator like tracker-axi, then holds stable", async () => {
+  it("preserves the parent-body blank separator across mutations", async () => {
     const SPACED = MAP.replace("  parent body\n  - [x] 1. Child one", "  parent body\n\n  - [x] 1. Child one");
     const b = makeBacklog(SPACED);
     try {
       await b.store.update("loose", { priority: 1 });
       const once = b.read();
-      expect(once).not.toContain("  parent body\n\n  - [x] 1. Child one");
-      expect(once).toContain("  parent body\n  - [x] 1. Child one");
+      expect(once).toContain("  parent body\n\n  - [x] 1. Child one");
       await b.store.update("call", { priority: 1 });
       const before = once.split("\n");
       const after = b.read().split("\n");
