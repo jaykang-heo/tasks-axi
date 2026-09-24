@@ -40,6 +40,8 @@ interface V2Task {
   /** Leaf state as written; recomputed for parents. */
   state: State;
   body: string[];
+  /** Blank lines between this task's body and its first child, preserved verbatim. */
+  childSeparator: string[];
   children: V2Task[];
 }
 
@@ -154,6 +156,17 @@ export function parseV2(src: string): V2Tree {
 
   const checks: Array<() => void> = [];
 
+  const childSeparator = (indent: number): string[] => {
+    const start = i;
+    const out: string[] = [];
+    while (i < lines.length && (lines[i] as string).trim() === "") out.push(lines[i++] as string);
+    const next = lines[i] as string | undefined;
+    const match = next?.match(TASK_LINE);
+    if (match && (match[1] as string).length === indent) return out;
+    i = start;
+    return [];
+  };
+
   const tasks = (indent: number, owner: string): V2Task[] => {
     const out: V2Task[] = [];
     while (i < lines.length) {
@@ -178,7 +191,15 @@ export function parseV2(src: string): V2Tree {
       const { id, prose } = splitId(m[4] as string, line, "task record");
       fresh(id, line);
       i++;
-      const task: V2Task = { id, prose, state: MARKER_STATE[marker], body: body(indent + INDENT), children: [] };
+      const taskBody = body(indent + INDENT);
+      const task: V2Task = {
+        id,
+        prose,
+        state: MARKER_STATE[marker],
+        body: taskBody,
+        childSeparator: childSeparator(indent + INDENT),
+        children: [],
+      };
       task.children = tasks(indent + INDENT, owner);
       const pos = out.length + 1;
       checks.push(() => {
@@ -427,7 +448,14 @@ export function renderV2(doc: MaybeV2Doc): string {
     for (const id of added) {
       const entry = entries.get(id) as TaskEntry;
       const next = fromEntry(entry);
-      unfiled.tasks.push({ id, prose: `${next.prose} `, state: entry.task.state as State, body: next.body, children: [] });
+      unfiled.tasks.push({
+        id,
+        prose: `${next.prose} `,
+        state: entry.task.state as State,
+        body: next.body,
+        childSeparator: [],
+        children: [],
+      });
     }
   }
 
@@ -437,6 +465,7 @@ export function renderV2(doc: MaybeV2Doc): string {
     out.push(`${pad}- [${STATE_MARKER[effective(t)]}] ${ordinal}. ${t.prose.trimEnd()} <!--#${t.id}-->`);
     const bodyPad = " ".repeat((depth + 1) * INDENT);
     for (const b of t.body) out.push(b === "" ? "" : `${bodyPad}${b}`);
+    if (t.children.length > 0) out.push(...t.childSeparator);
     t.children.forEach((c, k) => renderTask(c, k + 1, depth + 1));
   };
   const renderNode = (n: V2Node, ordinal: number, level: number): void => {
