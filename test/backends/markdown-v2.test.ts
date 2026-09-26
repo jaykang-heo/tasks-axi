@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { writeFileSync } from "node:fs";
-import { makeBacklog } from "../helpers.js";
+import { parseBacklog } from "../../src/backends/markdown-grammar.js";
+import { FIRSTMATE_V2_FIXTURE, makeBacklog } from "../helpers.js";
 
 const MAP = `# Backlog
 
@@ -183,5 +184,79 @@ describe("MarkdownStore on the hierarchical (v2) map", () => {
     } finally {
       b.cleanup();
     }
+  });
+});
+
+describe("MarkdownStore on a canonical-shaped v2 backlog", () => {
+  it("reads every task with state, captain holds, dependency edges, and prose links", async () => {
+    const b = makeBacklog(FIRSTMATE_V2_FIXTURE);
+    try {
+      const { items } = await b.store.list({});
+      const by = Object.fromEntries(items.map((t) => [t.id, t]));
+      expect(Object.keys(by).sort()).toEqual([
+        "firstmate-delivery-enforcement",
+        "old-loose-end",
+        "request-delivery-integrated-verification",
+        "request-delivery-reliability",
+        "reward-processor-production-rollout",
+        "unattended-pr-cleanup",
+        "wallet-currency-overpayment-decisions",
+        "wallet-currency-overpayment-followup",
+      ]);
+      expect(by["request-delivery-reliability"]?.state).toBe("in_flight");
+      expect(by["request-delivery-integrated-verification"]?.state).toBe("queued");
+      expect(by["wallet-currency-overpayment-followup"]?.state).toBe("done");
+      expect(by["firstmate-delivery-enforcement"]?.hold).toEqual({
+        reason: "Captain decision pending on the lease wording",
+        kind: "captain",
+      });
+      expect(by["wallet-currency-overpayment-decisions"]?.hold?.kind).toBe("captain");
+      expect(by["request-delivery-integrated-verification"]?.deps).toEqual([
+        { type: "blocked-by", id: "request-delivery-reliability" },
+        { type: "blocked-by", id: "firstmate-delivery-enforcement" },
+      ]);
+      expect(by["unattended-pr-cleanup"]?.deps).toEqual([
+        { type: "discovered-from", id: "request-delivery-reliability" },
+      ]);
+      expect(by["unattended-pr-cleanup"]?.priority).toBe(0);
+      expect(
+        by["wallet-currency-overpayment-followup"]?.links.some(
+          (l) => l.kind === "report" && l.url === "data/backlog-architecture-reframe/report.md",
+        ),
+      ).toBe(true);
+      expect(
+        by["reward-processor-production-rollout"]?.links.some(
+          (l) => l.kind === "pr" && l.url === "https://github.com/o/r/pull/12",
+        ),
+      ).toBe(true);
+    } finally {
+      b.cleanup();
+    }
+  });
+
+  it("round-trips the canonical-shaped file byte-exact, and a targeted edit touches one line", async () => {
+    const b = makeBacklog(FIRSTMATE_V2_FIXTURE);
+    try {
+      await expect(b.store.render()).resolves.toBe(8);
+      expect(b.read()).toBe(FIRSTMATE_V2_FIXTURE);
+      await b.store.update("unattended-pr-cleanup", { priority: 1 });
+      const before = FIRSTMATE_V2_FIXTURE.split("\n");
+      const after = b.read().split("\n");
+      expect(after.filter((line, i) => line !== before[i])).toEqual([
+        "- [ ] 1. Inspect unattended PRs discovered-from: request-delivery-reliability (repo: rune) (kind: scout) (priority: 1) <!--#unattended-pr-cleanup-->",
+      ]);
+    } finally {
+      b.cleanup();
+    }
+  });
+
+  it("leaves no task visible to the flat grammar, so a pre-v2 reader goes blind instead of half-reading", () => {
+    let tasks = 0;
+    for (const section of parseBacklog(FIRSTMATE_V2_FIXTURE).sections) {
+      for (const entry of section.entries) {
+        if (entry.kind === "task") tasks++;
+      }
+    }
+    expect(tasks).toBe(0);
   });
 });

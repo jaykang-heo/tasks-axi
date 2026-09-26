@@ -19,6 +19,17 @@ export const FIRSTMATE_FIXTURE = readFileSync(
   "utf8",
 );
 
+/**
+ * A backlog shaped like firstmate's real canonical `data/backlog.md`: marked
+ * request-head sections carrying id comments, checkbox task rows with
+ * captain holds (including non-English prose), `blocked-by` edges,
+ * decision-digest bodies, and PR/report links in the prose.
+ */
+export const FIRSTMATE_V2_FIXTURE = readFileSync(
+  new URL("./fixtures/firstmate-backlog-v2.md", import.meta.url),
+  "utf8",
+);
+
 export const MULTI_REASON_FIXTURE = [
   "# Backlog",
   "",
