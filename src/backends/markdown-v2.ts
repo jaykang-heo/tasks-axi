@@ -87,7 +87,7 @@ export function isV2(src: string): boolean {
   }
   if (roots > 0 && flat > 0) {
     throw new AxiError("backlog mixes the flat state sections and v2 node headings", "VALIDATION_ERROR", [
-      "Restore the file and migrate the whole file with `tracker-axi backlog migrate`",
+      "Keep one layout per file: state sections (`## In flight` / `## Queued` / `## Done`) or marked request heads (`## [ ] 1. Title <!--#id-->`), then move the remaining rows across",
     ]);
   }
   return roots > 0;
@@ -203,8 +203,8 @@ export function parseV2(src: string): V2Tree {
       task.children = tasks(indent + INDENT, owner);
       const pos = out.length + 1;
       checks.push(() => {
-        if (STATE_MARKER[effective(task)] !== marker) fail(`stale marker on "${id}"`, line, ["Run `tracker-axi backlog lint --fix`"]);
-        if (ordinal !== pos) fail(`stale ordinal on "${id}"`, line, ["Run `tracker-axi backlog lint --fix`"]);
+        if (STATE_MARKER[effective(task)] !== marker) fail(`stale marker on "${id}"`, line, ["Set the checkbox to the state derived from its child tasks"]);
+        if (ordinal !== pos) fail(`stale ordinal on "${id}"`, line, ["Renumber the record to its position among its siblings"]);
       });
       out.push(task);
     }
@@ -233,8 +233,8 @@ export function parseV2(src: string): V2Tree {
       node.nodes = nodes(level + 1);
       const pos = out.length + 1;
       checks.push(() => {
-        if (STATE_MARKER[nodeState(node)] !== marker) fail(`stale marker on node "${id}"`, line, ["Run `tracker-axi backlog lint --fix`"]);
-        if (ordinal !== pos) fail(`stale ordinal on node "${id}"`, line, ["Run `tracker-axi backlog lint --fix`"]);
+        if (STATE_MARKER[nodeState(node)] !== marker) fail(`stale marker on node "${id}"`, line, ["Set the heading marker to the state derived from its tasks"]);
+        if (ordinal !== pos) fail(`stale ordinal on node "${id}"`, line, ["Renumber the heading to its position among its siblings"]);
       });
       out.push(node);
     }
