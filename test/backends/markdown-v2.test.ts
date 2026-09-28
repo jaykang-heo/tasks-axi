@@ -154,6 +154,19 @@ describe("MarkdownStore on the hierarchical (v2) map", () => {
     }
   });
 
+  it("preserves a v2 file without a final newline on write", async () => {
+    const b = makeBacklog(MAP.replace(/\n$/, ""));
+    try {
+      await b.store.update("loose", { priority: 1 });
+      expect(b.read().endsWith("\n")).toBe(false);
+      expect(b.read()).toContain(
+        "- [/] 1. Loose work (kind: ship) (priority: 1) (since 2026-06-01) <!--#loose-->"
+      );
+    } finally {
+      b.cleanup();
+    }
+  });
+
   it("preserves the parent-body blank separator across mutations", async () => {
     const SPACED = MAP.replace("  parent body\n  - [x] 1. Child one", "  parent body\n\n  - [x] 1. Child one");
     const b = makeBacklog(SPACED);

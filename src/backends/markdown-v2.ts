@@ -60,6 +60,8 @@ export interface V2Tree {
   parentState: Map<string, State>;
   /** Newline style observed at load, so a write preserves CRLF files. */
   newline: "\n" | "\r\n";
+  /** Whether the source ended with a newline, so render is byte-stable. */
+  finalNewline: boolean;
 }
 
 /** Documents parsed from a v2 file carry their tree; the flat grammar never sets it. */
@@ -120,7 +122,10 @@ function nodeState(node: V2Node): State {
 // ---------------------------------------------------------------------------
 
 export function parseV2(src: string): V2Tree {
-  const lines = src.replace(/\n$/, "").split("\n").map((l) => l.replace(/\r$/, ""));
+  const finalNewline = src.endsWith("\n");
+  const lines = (finalNewline ? src.slice(0, -1) : src)
+    .split("\n")
+    .map((l) => l.replace(/\r$/, ""));
   let i = 0;
   const preamble: string[] = [];
   while (i < lines.length && !HEADING.test(lines[i] as string)) preamble.push(lines[i++] as string);
@@ -246,6 +251,7 @@ export function parseV2(src: string): V2Tree {
     nodes: nodes(2),
     parentState: new Map(),
     newline: src.includes("\r\n") ? "\r\n" : "\n",
+    finalNewline,
   };
   if (i < lines.length) fail("unreachable content after the last node", i + 1);
   for (const check of checks) check();
@@ -482,6 +488,7 @@ export function renderV2(doc: MaybeV2Doc): string {
     if (out.length > 0) out.push("");
     renderNode(n, k + 1, 2);
   });
-  const text = out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
-  return tree.newline === "\r\n" ? text.replace(/\n/g, "\r\n") : text;
+  const text = out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
+  const rendered = tree.finalNewline ? `${text}\n` : text;
+  return tree.newline === "\r\n" ? rendered.replace(/\n/g, "\r\n") : rendered;
 }
