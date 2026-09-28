@@ -1,0 +1,12 @@
+fm-contained-scenario-v1
+root=/Users/leo/.treehouse/tasks-axi-1fe4af/1/tasks-axi/./scenario-root-tmp
+fm_home=/Users/leo/.treehouse/tasks-axi-1fe4af/1/tasks-axi/./scenario-root-tmp/fm-home
+fixtures=/Users/leo/.treehouse/tasks-axi-1fe4af/1/tasks-axi/./scenario-root-tmp/fixtures
+isolated_fm_home=/Users/leo/.treehouse/tasks-axi-1fe4af/1/tasks-axi/./scenario-root-tmp/fm-home
+fixture_dir=/Users/leo/.treehouse/tasks-axi-1fe4af/1/tasks-axi/./scenario-root-tmp/fixtures
+failing_replay=node scenario-root-tmp/fixtures/assert-flat-sees-tasks.mjs scenario-root-tmp/fixtures/canonical-v2.md 
+failing_status=1
+passing_replay=node dist/bin/tasks-axi.js list --file scenario-root-tmp/fixtures/canonical-v2.md 
+passing_status=0
+debugging_pass=flat grammar reads 0 of 8 tasks in the canonical-shaped v2 copy (silent blind read, the pre-v2 failure); this branch reads 8/8 and round-trips byte-exact
+optimization_pass=none: correctness change, no perf surface
